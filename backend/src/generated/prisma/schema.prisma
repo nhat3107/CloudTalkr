@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  output        = "../backend/src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  fullName         String
+  email            String          @unique
+  password         String
+  bio              String          @default("")
+  profilePic       String          @default("")
+  nativeLanguage   String          @default("")
+  learningLanguage String          @default("")
+  location         String          @default("")
+  isOnboarded      Boolean         @default(false)
+  friendIds        String[]        @default([])
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model FriendRequest {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  senderId    String              @db.ObjectId
+  recipientId String              @db.ObjectId
+  status      FriendRequestStatus @default(PENDING) // Could be enum for stricter control
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  sender      User                @relation("SentRequests", fields: [senderId], references: [id])
+  recipient   User                @relation("ReceivedRequests", fields: [recipientId], references: [id])
+
+  @@unique([senderId, recipientId]) // Prevent duplicate friend requests
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+}
