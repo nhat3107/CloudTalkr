@@ -1,19 +1,17 @@
 version: 0.2
 env:
   variables:
-    INSTANCE_TAG: "backend-server" # Tag Name của EC2 backend
+    INSTANCE_TAG: "backend-server"
 phases:
   install:
     runtime-versions:
       nodejs: 18
-    commands:
-      - echo "No dependencies for build server"
   build:
     commands:
-      - echo "Skipping build (handled on EC2)"
+      - echo "No build for backend here"
   post_build:
     commands:
-      - echo "Get EC2 Instance ID from tag..."
+      - echo "Getting EC2 instance ID from tag..."
       - |
         INSTANCE_ID=$(aws ec2 describe-instances \
           --filters "Name=tag:Name,Values=$INSTANCE_TAG" \
