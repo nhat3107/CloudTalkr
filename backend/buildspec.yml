@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo Installing dependencies...
+      - cd backend
+      - npm install
+
+  build:
+    commands:
+      - echo Build completed, skipping compile for Node.js backend...
+
+  post_build:
+    commands:
+      - echo Deploying to EC2...
+      # ZIP source code
+      - zip -r backend.zip .
+      # Upload zip to S3
+      - aws s3 cp backend.zip s3://my-backend-deploy-bucket/backend.zip
+      # Send SSM command to EC2 to download & restart app
+      - aws ssm send-command \
+          --targets "Key=instanceIds,Values=$EC2_INSTANCE_ID" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy backend" \
+          --parameters 'commands=[
+            "aws s3 cp s3://my-backend-deploy-bucket/backend.zip /home/ec2-user/backend.zip",
+            "cd /home/ec2-user && unzip -o backend.zip -d backend",
+            "cd backend && npm install --production",
+            "pm2 restart all || pm2 start server.js"
+          ]'
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: backend
