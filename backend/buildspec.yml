@@ -23,7 +23,7 @@ phases:
           --document-name "AWS-RunShellScript" \
           --comment "Deploy backend" \
           --parameters 'commands=[
-            "cd CloudTalkr && git pull origin main",
+            "cd ~/CloudTalkr && git reset --hard && git pull origin main",
             "npm ci --production",
             "pm2 restart all"
           ]'
