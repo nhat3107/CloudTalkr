@@ -24,6 +24,7 @@ phases:
           --comment "Deploy backend" \
           --parameters 'commands=[
             "cd ~/CloudTalkr && git reset --hard && git pull origin main",
+            "bash load_env.sh",
             "npm ci --production",
             "pm2 restart all"
           ]'
