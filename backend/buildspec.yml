@@ -1,46 +1,31 @@
 version: 0.2
-
 env:
   variables:
-    EC2_TAG_KEY: "Name"
-    EC2_TAG_VALUE: "backend-server"
-    EC2_WORKDIR: "/home/ec2-user/backend"
-    GIT_BRANCH: "main"
-
+    INSTANCE_TAG: "backend-server" # Tag Name của EC2 backend
 phases:
   install:
     runtime-versions:
-      nodejs: 20
+      nodejs: 18
     commands:
-      - echo "Installing dependencies..."
-      - npm install
-
+      - echo "No dependencies for build server"
   build:
     commands:
-      - echo "Build stage..."
-      # Nếu có test
-      # npm test
-
+      - echo "Skipping build (handled on EC2)"
   post_build:
     commands:
-      - echo "Finding EC2 instance ID..."
+      - echo "Get EC2 Instance ID from tag..."
       - |
-        EC2_INSTANCE_ID=$(aws ec2 describe-instances \
-          --filters "Name=tag:${EC2_TAG_KEY},Values=${EC2_TAG_VALUE}" "Name=instance-state-name,Values=running" \
+        INSTANCE_ID=$(aws ec2 describe-instances \
+          --filters "Name=tag:Name,Values=$INSTANCE_TAG" \
           --query "Reservations[].Instances[].InstanceId" \
           --output text)
-        echo "EC2 Instance ID: $EC2_INSTANCE_ID"
-
-      - echo "Deploying to EC2..."
-      - aws ssm send-command \
-        --targets "Key=instanceIds,Values=$EC2_INSTANCE_ID" \
-        --document-name "AWS-RunShellScript" \
-        --comment "Deploy backend" \
-        --parameters 'commands=[
-        "cd '"$EC2_WORKDIR"'",
-        "git fetch origin '"$GIT_BRANCH"'",
-        "git reset --hard origin/'"$GIT_BRANCH"'",
-        "npm install --production",
-        "pm2 restart backend || pm2 start server.js --name backend",
-        "pm2 save"
-        ]'
+        echo "Deploying to $INSTANCE_ID..."
+        aws ssm send-command \
+          --targets "Key=instanceIds,Values=$INSTANCE_ID" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy backend" \
+          --parameters 'commands=[
+            "cd /var/www/backend && git pull origin main",
+            "npm ci --production",
+            "pm2 restart all"
+          ]'
