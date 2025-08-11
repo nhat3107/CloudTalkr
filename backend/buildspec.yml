@@ -1,38 +1,46 @@
 version: 0.2
 
+env:
+  variables:
+    EC2_TAG_KEY: "Name"
+    EC2_TAG_VALUE: "backend-server"
+    EC2_WORKDIR: "/home/ec2-user/backend"
+    GIT_BRANCH: "main"
+
 phases:
   install:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo Installing dependencies...
-      - cd backend
+      - echo "Installing dependencies..."
       - npm install
 
   build:
     commands:
-      - echo Build completed, skipping compile for Node.js backend...
+      - echo "Build stage..."
+      # Nếu có test
+      # npm test
 
   post_build:
     commands:
-      - echo Deploying to EC2...
-      # ZIP source code
-      - zip -r backend.zip .
-      # Upload zip to S3
-      - aws s3 cp backend.zip s3://my-backend-deploy-bucket/backend.zip
-      # Send SSM command to EC2 to download & restart app
-      - aws ssm send-command \
-          --targets "Key=instanceIds,Values=$EC2_INSTANCE_ID" \
-          --document-name "AWS-RunShellScript" \
-          --comment "Deploy backend" \
-          --parameters 'commands=[
-            "aws s3 cp s3://my-backend-deploy-bucket/backend.zip /home/ec2-user/backend.zip",
-            "cd /home/ec2-user && unzip -o backend.zip -d backend",
-            "cd backend && npm install --production",
-            "pm2 restart all || pm2 start server.js"
-          ]'
+      - echo "Finding EC2 instance ID..."
+      - |
+        EC2_INSTANCE_ID=$(aws ec2 describe-instances \
+          --filters "Name=tag:${EC2_TAG_KEY},Values=${EC2_TAG_VALUE}" "Name=instance-state-name,Values=running" \
+          --query "Reservations[].Instances[].InstanceId" \
+          --output text)
+        echo "EC2 Instance ID: $EC2_INSTANCE_ID"
 
-artifacts:
-  files:
-    - '**/*'
-  base-directory: backend
+      - echo "Deploying to EC2..."
+      - aws ssm send-command \
+        --targets "Key=instanceIds,Values=$EC2_INSTANCE_ID" \
+        --document-name "AWS-RunShellScript" \
+        --comment "Deploy backend" \
+        --parameters 'commands=[
+        "cd '"$EC2_WORKDIR"'",
+        "git fetch origin '"$GIT_BRANCH"'",
+        "git reset --hard origin/'"$GIT_BRANCH"'",
+        "npm install --production",
+        "pm2 restart backend || pm2 start server.js --name backend",
+        "pm2 save"
+        ]'
