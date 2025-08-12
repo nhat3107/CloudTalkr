@@ -1,0 +1,14 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/CloudTalkr/backend
+hooks:
+  AfterInstall:
+    - location: scripts/load_env.sh
+      timeout: 300
+      runas: ec2-user
+  ApplicationStart:
+    - location: scripts/start_backend.sh
+      timeout: 300
+      runas: ec2-user
