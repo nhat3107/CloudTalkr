@@ -15,8 +15,8 @@ const __dirname = path.resolve();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true, // allow frontend to send cookies
+    origin: [process.env.FRONTEND_URL, process.env.API_GATEWAY_URL],
+    credentials: true,
   })
 );
 
