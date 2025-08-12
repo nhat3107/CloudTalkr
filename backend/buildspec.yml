@@ -1,26 +1,25 @@
 version: 0.2
 
-env:
-  variables:
-    BACKEND_DIR: "backend"
-
 phases:
   install:
     runtime-versions:
       nodejs: 18
     commands:
-      - cd $BACKEND_DIR
+      - echo "Installing dependencies for backend..."
+      - cd backend
       - npm install
   build:
     commands:
-      - echo "Build backend (if needed)..."
+      - echo "Fetching environment variables from SSM..."
+      - for name in PORT DATABASE_URL STREAM_API_KEY STREAM_API_SECRET JWT_SECRET_KEY NODE_ENV CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET; do
+          aws ssm get-parameter --name "$name" --with-decryption --query "Parameter.Value" --output text >> .env;
+        done
+      - echo "Build step complete. Ready for deployment."
   post_build:
     commands:
-      - echo "Packaging backend for CodeDeploy..."
+      - echo "Zipping backend folder for CodeDeploy..."
       - cd ..
-      - mkdir -p codedeploy
-      - cp -r $BACKEND_DIR/* codedeploy/
-      - cp appspec.yml codedeploy/
+      - zip -r backend.zip backend appspec.yml
 artifacts:
   files:
-    - codedeploy/**/*
+    - backend.zip
