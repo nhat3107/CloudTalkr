@@ -140,7 +140,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\Data\\MY_CODE\\NodeJs\\streamify-video-calls\\backend\\src\\generated\\prisma",
+      "value": "D:\\Data\\MY_CODE\\NodeJs\\CloudTalkr\\backend\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -155,10 +155,14 @@ const config = {
       {
         "fromEnvVar": null,
         "value": "debian-openssl-3.0.x"
+      },
+      {
+        "fromEnvVar": null,
+        "value": "rhel-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\Data\\MY_CODE\\NodeJs\\streamify-video-calls\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\Data\\MY_CODE\\NodeJs\\CloudTalkr\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -180,8 +184,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\"]\n  output        = \"../backend/src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id               String          @id @default(auto()) @map(\"_id\") @db.ObjectId\n  fullName         String\n  email            String          @unique\n  password         String\n  bio              String          @default(\"\")\n  profilePic       String          @default(\"\")\n  nativeLanguage   String          @default(\"\")\n  learningLanguage String          @default(\"\")\n  location         String          @default(\"\")\n  isOnboarded      Boolean         @default(false)\n  friendIds        String[]        @default([])\n  sentRequests     FriendRequest[] @relation(\"SentRequests\")\n  receivedRequests FriendRequest[] @relation(\"ReceivedRequests\")\n  createdAt        DateTime        @default(now())\n  updatedAt        DateTime        @updatedAt\n}\n\nmodel FriendRequest {\n  id          String              @id @default(auto()) @map(\"_id\") @db.ObjectId\n  senderId    String              @db.ObjectId\n  recipientId String              @db.ObjectId\n  status      FriendRequestStatus @default(PENDING) // Could be enum for stricter control\n  createdAt   DateTime            @default(now())\n  updatedAt   DateTime            @updatedAt\n  sender      User                @relation(\"SentRequests\", fields: [senderId], references: [id])\n  recipient   User                @relation(\"ReceivedRequests\", fields: [recipientId], references: [id])\n\n  @@unique([senderId, recipientId]) // Prevent duplicate friend requests\n}\n\nenum FriendRequestStatus {\n  PENDING\n  ACCEPTED\n}\n",
-  "inlineSchemaHash": "3f7530aa6f7423ef153556fd6d4c9335fb7d78cc05c0bd78467df7828607984b",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\", \"rhel-openssl-3.0.x\"]\n  output        = \"../backend/src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id               String          @id @default(auto()) @map(\"_id\") @db.ObjectId\n  fullName         String\n  email            String          @unique\n  password         String\n  bio              String          @default(\"\")\n  profilePic       String          @default(\"\")\n  nativeLanguage   String          @default(\"\")\n  learningLanguage String          @default(\"\")\n  location         String          @default(\"\")\n  isOnboarded      Boolean         @default(false)\n  friendIds        String[]        @default([])\n  sentRequests     FriendRequest[] @relation(\"SentRequests\")\n  receivedRequests FriendRequest[] @relation(\"ReceivedRequests\")\n  createdAt        DateTime        @default(now())\n  updatedAt        DateTime        @updatedAt\n}\n\nmodel FriendRequest {\n  id          String              @id @default(auto()) @map(\"_id\") @db.ObjectId\n  senderId    String              @db.ObjectId\n  recipientId String              @db.ObjectId\n  status      FriendRequestStatus @default(PENDING) // Could be enum for stricter control\n  createdAt   DateTime            @default(now())\n  updatedAt   DateTime            @updatedAt\n  sender      User                @relation(\"SentRequests\", fields: [senderId], references: [id])\n  recipient   User                @relation(\"ReceivedRequests\", fields: [recipientId], references: [id])\n\n  @@unique([senderId, recipientId]) // Prevent duplicate friend requests\n}\n\nenum FriendRequestStatus {\n  PENDING\n  ACCEPTED\n}\n",
+  "inlineSchemaHash": "afaa4782bfb06f8753718cd40a3e40db4ed6a0c26f89c2ff4ef4a4a45f1f5b46",
   "copyEngine": true
 }
 
@@ -226,6 +230,10 @@ path.join(process.cwd(), "backend/src/generated/prisma/query_engine-windows.dll.
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
 path.join(process.cwd(), "backend/src/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node")
+
+// file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-rhel-openssl-3.0.x.so.node");
+path.join(process.cwd(), "backend/src/generated/prisma/libquery_engine-rhel-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "backend/src/generated/prisma/schema.prisma")
