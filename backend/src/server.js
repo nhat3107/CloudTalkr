@@ -15,7 +15,7 @@ const __dirname = path.resolve();
 
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, process.env.API_GATEWAY_URL],
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
@@ -26,6 +26,15 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
