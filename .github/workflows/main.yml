@@ -9,7 +9,6 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
-      - "/"
 
 jobs:
   detect-changes:
@@ -30,6 +29,8 @@ jobs:
   build-push:
     needs: detect-changes
     runs-on: ubuntu-latest
+    environment: Deployment
+      
     steps:
       - uses: actions/checkout@v4
 
