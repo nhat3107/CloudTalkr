@@ -1,44 +1,95 @@
-name: Deploy Backend to EC2
+name: Full Stack CI/CD
 
 on:
   push:
     branches:
       - main
       - staging
-      - test
+      - develop
+    paths:
+      - "backend/**"
+      - "frontend/**"
 
 jobs:
-  deploy:
+  detect-changes:
     runs-on: ubuntu-latest
-    environment: Deployment
-
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+  build-push:
+    needs: detect-changes
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+      # --- BACKEND ---
+      - name: Build & Push backend image
+        if: needs.detect-changes.outputs.backend == 'true'
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:latest ./backend
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:latest
 
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:${{ github.ref_name }} ./backend
+      # --- FRONTEND ---
+      - name: Build frontend
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          echo "Frontend built successfully."
+  test:
+    needs: [detect-changes, build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run backend tests
+        if: needs.detect-changes.outputs.backend == 'true'
+        run: |
+          cd backend
+          npm ci
+          npm test
 
-      - name: Push image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:${{ github.ref_name }}
+      - name: Run frontend tests
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          cd frontend
+          npm ci
+          npm test
 
-      - name: Deploy to EC2 via SSH
+  deploy:
+    needs: [detect-changes, test]
+    runs-on: ubuntu-latest
+    environment: Deployment
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Deploy Backend (EC2) ---
+      - name: Deploy backend to EC2
+        if: needs.detect-changes.outputs.backend == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
+          username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/app
-            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:${{ github.ref_name }}
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/cloudtalkr:latest
 
-            # Export environment variables (from GitHub Secrets)
             export PORT=${{ secrets.PORT }}
             export NODE_ENV=${{ github.ref_name }}
             export DATABASE_URL=${{ secrets.DATABASE_URL }}
-            export JWT_SECRET=${{ secrets.JWT_SECRET }}
+            export JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
             export CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
             export CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
             export CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
@@ -46,6 +97,13 @@ jobs:
             export STREAM_API_SECRET=${{ secrets.STREAM_API_SECRET }}
             export FRONTEND_URL=${{ secrets.FRONTEND_URL }}
 
-            # Restart docker compose
             docker compose down
             docker compose up -d
+
+      # --- Deploy Frontend (Amplify) ---
+      - name: Deploy frontend to Amplify
+        if: needs.detect-changes.outputs.frontend == 'true'
+        uses: aws-actions/configure-amplify@v2
+        with:
+          amplify_app_id: ${{ secrets.AMPLIFY_APP_ID }}
+          amplify_env: ${{ github.ref_name }}
